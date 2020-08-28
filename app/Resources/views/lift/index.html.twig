@@ -67,46 +67,69 @@
     {{ parent() }}
     <script>
 
-    $(document).ready(function(){
+       var RepLogApp = {
+            initialize: function($wrapper){
+                this.$wrapper = $wrapper; //Propriété - this refer to this object
 
-        var $table = $('.js-rep-log-table');
+                this.$wrapper.find('.js-delete-rep-log').on(
+                    "click", 
+                    this.handleRepLogDelete.bind(this) //pas de (),car je l'initialise et ne l'exécute pas, je passe juste la fonction par référence + je fais en sorte que le this représente l'objet
+                );
+                this.$wrapper.find('tbody tr').on(
+                    'click',
+                    this.handleRowClick.bind(this) //pas de (),car je l'initialise et ne l'exécute pas
+                );
+            },
+            updateTotalWeigthLifted: function(){
+                var totalWeight = 0;
+                this.$wrapper.find('tbody tr').each(function(){ //je passe une fn de callback, alors this n'est plus notre RepLogApp object, this est ici le tr element object
+                    totalWeight += $(this).data('weight');
+                });
+                this.$wrapper.find('.js-total-weight').html(totalWeight);
+            },
 
-        $table.find('.js-delete-rep-log').on("click", function(e){
+            handleRepLogDelete: function(e){
+                e.preventDefault();
+                e.stopPropagation();
+                //comme j'ai bindé le this à l'objet et là je veux l'élément cliqué je vais plutot utiliser e.currentTarget
+                //$(this).addClass('text-danger');
+                //$(this).find('.fa')
+                var $link = $(e.currentTarget);
+                $link.addClass('text-danger');
+                $link.find('fa')
+                    .removeClass('fa-trash')
+                    .addClass('fa-spinner')
+                    .addClass('fa-spin');
+                //console.dir(e.target);
+                //console.log(e.currentTarget === this);
 
-            e.preventDefault();
-            e.stopPropagation();
-            $(this).addClass('text-danger');
-            $(this).find('.fa')
-                .removeClass('fa-trash')
-                .addClass('fa-spinner')
-                .addClass('fa-spin');
+                //Permet de lire un data attribute , ici c'est le data qui se nomme url
+                var deleteUrl = $link.data('url');
+                var $row = $link.closest('tr'); //$ parce que c'est un objet JQuery
+                var self = this; //la variable self correspond à l'objet RepLogApp que l'on a bindé- voir suite ligne 118
+                //Appel Ajax
 
-            //console.dir(e.target);
-            //console.log(e.currentTarget === this);
+                $.ajax({
+                    url: deleteUrl,
+                    method: 'DELETE',
+                    success: function(){
+                        $row.fadeOut('normal', function(){
+                            $row.remove(); // ou $(this) car this correspond au "row"
+                            self.updateTotalWeigthLifted(); //Je suis dans un callback, je ne peux pas utiliser this, je dois utiliser l'objet
+                        });                        
+                    }
+                });
+            },
 
-            //Permet de lire un data attribute , ici c'est le data qui se nomme url
-            var deleteUrl = $(this).data('url');
-            var $row = $(this).closest('tr'); //£$ parce que c'est un objet JQuery
-            var $totalWeightContainer = $table.find(".js-total-weight");
-            var newWeight = $totalWeightContainer.html()-$row.data("weight");
-            //Appel Ajax
-
-            $.ajax({
-                url: deleteUrl,
-                method: 'DELETE',
-                success: function(){
-                    $row.fadeOut();
-                    $totalWeightContainer.html(newWeight);
-                }
-
-            })
-        });
-
-        $table.find("tbody tr").on("click", function(){
+            handleRowClick: function(){
                 console.log('row clicked');
-        });
+            }            
+        };
 
-    });
+     $(document).ready(function(){
+        var $table = $('.js-rep-log-table');  
+        RepLogApp.initialize($table);
+    });        
     
     </script>
 {% endblock %}
